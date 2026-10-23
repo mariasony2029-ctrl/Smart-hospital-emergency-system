@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Hospital ERMS</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">✚</div>
+      <div><h1>Smart Hospital <span>ERMS</span></h1><p>Emergency Resource Management System</p></div>
+    </div>
+    <div class="header-status"><span class="live-dot"></span> System Online</div>
+  </header>
+
+  <main class="container">
+    <section class="welcome">
+      <div><p class="eyebrow">EMERGENCY OPERATIONS</p><h2>Hospital Dashboard</h2><p class="muted">Manage patient priority and locate medical resources efficiently.</p></div>
+      <div class="date-chip" id="today"></div>
+    </section>
+
+    <section class="stats">
+      <article class="stat-card"><div class="stat-label">Patients Registered</div><div class="stat-number" id="totalPatients">3</div><div class="stat-note">Current queue</div></article>
+      <article class="stat-card critical"><div class="stat-label">Critical Patients</div><div class="stat-number" id="criticalPatients">1</div><div class="stat-note">Immediate attention</div></article>
+      <article class="stat-card"><div class="stat-label">Available ICU Beds</div><div class="stat-number" id="icuBeds">4</div><div class="stat-note">Out of 12 beds</div></article>
+      <article class="stat-card"><div class="stat-label">Ventilators Available</div><div class="stat-number" id="ventilators">3</div><div class="stat-note">Ready for use</div></article>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel">
+        <div class="panel-heading"><div><h3>Register Emergency Patient</h3><p class="muted">Higher severity receives higher priority.</p></div><span class="panel-icon">＋</span></div>
+        <form id="patientForm">
+          <label for="patientName">Patient name</label><input id="patientName" required maxlength="60" placeholder="Enter patient name">
+          <div class="form-row">
+            <div><label for="patientAge">Age</label><input id="patientAge" type="number" min="0" max="120" required placeholder="Age"></div>
+            <div><label for="patientId">Patient ID</label><input id="patientId" required maxlength="20" placeholder="e.g. P104"></div>
+          </div>
+          <label for="severity">Emergency severity</label>
+          <select id="severity" required>
+            <option value="1">Critical — Level 1</option>
+            <option value="2">Urgent — Level 2</option>
+            <option value="3" selected>Stable — Level 3</option>
+          </select>
+          <button class="primary-button" type="submit">Add Patient to Queue</button>
+        </form>
+        <div class="notice"><strong>Priority rule:</strong> Critical → Urgent → Stable. Patients with equal severity are handled in registration order.</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading"><div><h3>Find Patient Record</h3><p class="muted">Search by patient ID using binary search.</p></div><span class="panel-icon search-icon">⌕</span></div>
+        <form id="searchForm" class="search-form">
+          <label for="searchId">Patient ID</label>
+          <div class="search-row"><input id="searchId" required placeholder="e.g. P101"><button class="secondary-button" type="submit">Search</button></div>
+        </form>
+        <div id="searchResult" class="search-result" aria-live="polite">Search results will appear here.</div>
+        <div class="resource-box"><div><span class="resource-symbol">▦</span><div><strong>Resource availability</strong><p class="muted">Update counts as resources are assigned.</p></div></div>
+          <div class="resource-controls">
+            <label for="icuInput">ICU beds</label><input id="icuInput" type="number" min="0" max="12" value="4">
+            <label for="ventInput">Ventilators</label><input id="ventInput" type="number" min="0" max="20" value="3">
+            <button id="updateResources" class="secondary-button" type="button">Update Resources</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel queue-panel">
+      <div class="panel-heading"><div><h3>Emergency Patient Queue</h3><p class="muted">Sorted by triage priority.</p></div><span class="queue-count" id="queueCount">3 patients</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Patient ID</th><th>Name</th><th>Age</th><th>Severity</th><th>Priority</th><th>Action</th></tr></thead><tbody id="patientTable"></tbody></table></div>
+      <p id="emptyMessage" class="empty-message" hidden>No patients registered yet.</p>
+    </section>
+    <footer>Smart Hospital ERMS <span>•</span> Academic project demonstration. Not for real clinical decisions.</footer>
+  </main>
+
+  <script>
+    // Front-end demonstration. The Java file is a separate console implementation.
+    let patients = [
+      {id:"P101", name:"Anjali Thomas", age:42, severity:1, order:1},
+      {id:"P102", name:"Rahul Mathew", age:29, severity:2, order:2},
+      {id:"P103", name:"Meera Joseph", age:65, severity:3, order:3}
+    ];
+    let nextOrder = 4;
+    const severityName = n => n === 1 ? "Critical" : n === 2 ? "Urgent" : "Stable";
+    const severityClass = n => n === 1 ? "critical-badge" : n === 2 ? "urgent-badge" : "stable-badge";
+    function sortedPatients(){ return [...patients].sort((a,b)=>a.severity-b.severity || a.order-b.order); }
+    function render(){
+      const list = sortedPatients();
+      document.getElementById("totalPatients").textContent = patients.length;
+      document.getElementById("criticalPatients").textContent = patients.filter(p=>p.severity===1).length;
+      document.getElementById("queueCount").textContent = `${patients.length} patient${patients.length===1?"":"s"}`;
+      const tbody = document.getElementById("patientTable");
+      tbody.innerHTML = "";
+      list.forEach(p=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td class="id-cell"></td><td class="name-cell"></td><td></td><td><span class="severity-badge ${severityClass(p.severity)}">${severityName(p.severity)}</span></td><td>${p.severity}</td><td><button class="remove-button" data-id="${p.id}" aria-label="Remove ${p.id}">Remove</button></td>`;
+        tr.children[0].textContent = p.id;
+        tr.children[1].textContent = p.name;
+        tr.children[2].textContent = p.age;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("emptyMessage").hidden = patients.length !== 0;
+      document.getElementById("icuBeds").textContent = document.getElementById("icuInput").value;
+      document.getElementById("ventilators").textContent = document.getElementById("ventInput").value;
+    }
+    document.getElementById("patientForm").addEventListener("submit", e=>{
+      e.preventDefault();
+      const id = document.getElementById("patientId").value.trim();
+      if(patients.some(p=>p.id.toLowerCase()===id.toLowerCase())) { alert("That patient ID already exists."); return; }
+      patients.push({
+        id, name:document.getElementById("patientName").value.trim(),
+        age:Number(document.getElementById("patientAge").value),
+        severity:Number(document.getElementById("severity").value), order:nextOrder++
+      });
+      e.target.reset(); document.getElementById("severity").value="3"; render();
+    });
+    document.getElementById("patientTable").addEventListener("click", e=>{
+      if(e.target.matches(".remove-button")){
+        patients = patients.filter(p=>p.id !== e.target.dataset.id); render();
+      }
+    });
+    document.getElementById("searchForm").addEventListener("submit", e=>{
+      e.preventDefault();
+      // Binary search requires a sorted array; sort IDs before searching.
+      const key = document.getElementById("searchId").value.trim().toLowerCase();
+      const list = [...patients].sort((a,b)=>a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+      let low=0, high=list.length-1, found=null;
+      while(low<=high){
+        const mid=Math.floor((low+high)/2), current=list[mid].id.toLowerCase();
+        if(current===key){found=list[mid];break;}
+        if(current<key) low=mid+1; else high=mid-1;
+      }
+      const box=document.getElementById("searchResult");
+      box.className="search-result "+(found?"found":"not-found");
+      box.textContent=found ? `${found.name} (${found.id}) — Age ${found.age}, ${severityName(found.severity)} severity.` : "No patient found with that ID.";
+    });
+    document.getElementById("updateResources").addEventListener("click", ()=>{
+      const icu=Number(document.getElementById("icuInput").value), vent=Number(document.getElementById("ventInput").value);
+      if(!Number.isInteger(icu)||icu<0||icu>12||!Number.isInteger(vent)||vent<0||vent>20){alert("Enter valid resource counts.");return;}
+      render();
+    });
+    document.getElementById("today").textContent = new Date().toLocaleDateString(undefined,{weekday:"short",year:"numeric",month:"short",day:"numeric"});
+    render();
+  </script>
+</body>
+</html>
